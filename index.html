@@ -3,20 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secure Docs</title>
+    <title>Secure Passport Vault</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
-
+    
     <script src="https://unpkg.com/page-flip/dist/js/page-flip.browser.js"></script>
-
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/atropos@2.0.2/atropos.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/atropos@2.0.2/atropos.min.js"></script>
 
     <style>
         :root {
-            --bg: #1c1c1c;
-            --radius: 30px;
+            --bg: #121212;
+            --card-bg: #1e1e1e;
+            --accent: #d4af37; /* Золотой цвет паспорта */
         }
 
         body {
@@ -24,61 +22,70 @@
             margin: 0;
             font-family: system-ui, -apple-system, sans-serif;
             color: white;
-            overflow-x: hidden;
+            min-height: 100vh;
         }
 
         /* --- ВЕРХНЯЯ ПАНЕЛЬ --- */
         .header {
             padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-            background: rgba(28, 28, 28, 0.95);
+            background: rgba(30, 30, 30, 0.9);
             position: sticky;
             top: 0;
-            z-index: 100;
+            z-index: 10;
             backdrop-filter: blur(10px);
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: center;
         }
 
-        .auth-controls {
+        .controls {
             display: flex;
             gap: 10px;
             width: 100%;
-            max-width: 600px;
+            max-width: 800px;
         }
 
         input {
             flex: 1;
             background: #2c2c2c;
-            border: none;
-            padding: 15px;
-            border-radius: 15px;
+            border: 1px solid #444;
+            padding: 12px;
+            border-radius: 8px;
             color: white;
-            outline: none;
             text-align: center;
+            outline: none;
+            transition: 0.3s;
         }
+        input:focus { border-color: var(--accent); }
 
         button {
-            background: white;
+            background: var(--accent);
             color: black;
             border: none;
-            padding: 15px 25px;
-            border-radius: 15px;
+            padding: 0 20px;
+            border-radius: 8px;
             font-weight: bold;
             cursor: pointer;
         }
+        button:hover { filter: brightness(1.1); }
 
-        /* --- ЧИСТАЯ СЕТКА (3 колонки) --- */
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr); /* Ровно 3 колонки */
-            gap: 15px;
-            padding: 15px;
-            max-width: 1200px;
-            margin: 0 auto;
+        /* --- ГЛАВНАЯ СЕТКА (GRID) --- */
+        .container {
+            max-width: 1000px;
+            margin: 30px auto;
+            padding: 0 20px;
         }
 
+        .grid {
+            display: grid;
+            /* РОВНО 3 КОЛОНКИ */
+            grid-template-columns: repeat(3, 1fr); 
+            /* Высота автоматическая */
+            grid-auto-rows: auto;
+            gap: 20px;
+        }
+
+        /* Адаптив: на мобилках 1 колонка, на планшетах 2, но на ПК строго 3 */
         @media (max-width: 768px) {
             .grid { grid-template-columns: repeat(2, 1fr); }
         }
@@ -86,177 +93,184 @@
             .grid { grid-template-columns: 1fr; }
         }
 
-        .doc-item {
-            position: relative;
-            aspect-ratio: 1 / 1.4; /* Пропорция паспорта */
-            border-radius: var(--radius);
+        .doc-card {
+            background: var(--card-bg);
+            border-radius: 12px;
             overflow: hidden;
             cursor: pointer;
-            transition: transform 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+            /* Соотношение сторон паспорта */
+            aspect-ratio: 1 / 1.35; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            border: 1px solid #333;
         }
 
-        .doc-item:active { transform: scale(0.95); }
+        .doc-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            border-color: var(--accent);
+        }
 
-        .doc-item img {
+        .doc-card img {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            display: block;
         }
 
-        /* --- ПРОСМОТРЩИК (Overlay) --- */
+        .doc-title {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            font-size: 12px;
+            text-align: center;
+            color: #ddd;
+        }
+
+        /* --- МОДАЛКА ПРОСМОТРА (VIEWER) --- */
         #viewer {
             display: none;
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(0,0,0,0.9);
-            z-index: 1000;
+            background: rgba(0,0,0,0.92);
+            z-index: 100;
             justify-content: center;
             align-items: center;
+            flex-direction: column;
         }
 
-        /* Настройка Atropos (Контейнер перспективы) */
-        .my-atropos {
-            width: 350px;
-            height: 500px; /* Размер закрытого паспорта */
-        }
-        
-        /* Книга внутри Atropos */
-        .flip-book {
-            width: 100%;
-            height: 100%;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        /* Книга (Паспорт) */
+        .passport-book {
+            /* Размеры закрытого паспорта */
+            width: 320px; 
+            height: 460px;
+            /* Тени для реализма */
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6); 
         }
 
         .page {
             background-color: #fdfdfd;
             overflow: hidden;
             position: relative;
+            border-left: 1px solid #ccc;
         }
 
-        .page img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        /* Обложка (Красная) */
         .page.--cover {
-            background-color: #a00;
-        }
-
-        /* --- НАЛОЖЕНИЕ ДАННЫХ --- */
-        .data-layer {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none;
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
-            text-transform: uppercase;
-            color: #2b2b2b;
+            background-color: #a80000; /* Цвет паспорта РФ */
+            border: 2px solid #5a0000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
-        .val { position: absolute; transform-origin: top left; }
-
-        /* Координаты для левой страницы */
-        .page.--left .val-fio { 
-            top: 45%; left: 32%; 
-            font-size: 10px; 
-            width: 140px;
-            transform: rotate(-90deg);
+        /* Стилизация обложки CSS-ом (если картинка не прогрузится) */
+        .cover-content {
+            border: 2px solid #d4af37;
+            width: 80%; height: 90%;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #d4af37;
+            text-align: center;
         }
 
-        /* Координаты для правой страницы */
-        .page.--right .val-num {
-            top: 85%; left: 25%;
-            font-size: 14px;
-            color: #800;
+        /* --- ДАННЫЕ ВНУТРИ ПАСПОРТА --- */
+        .scan-layer {
+            width: 100%; height: 100%;
+            position: absolute;
+            top: 0; left: 0;
+        }
+        
+        /* Текст поверх скана (имитация печати) */
+        .data-text {
+            position: absolute;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            color: #1a1a1a;
+            font-weight: bold;
+            font-size: 12px;
+            letter-spacing: 1px;
+            /* Поворот для вертикального расположения данных */
             transform: rotate(-90deg);
+            transform-origin: left top;
         }
 
-        /* --- МОДАЛКА ДОБАВЛЕНИЯ --- */
+        /* Позиции данных (подбираем под картинку бланка) */
+        .fio-pos { top: 60%; left: 35%; width: 200px; }
+        .num-pos { top: 90%; left: 25%; color: #900; font-size: 16px; }
+
+        /* Модалка добавления */
         #modal-add {
             display: none;
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.8);
-            z-index: 2000;
-            justify-content: center;
+            z-index: 200;
             align-items: center;
+            justify-content: center;
         }
-        .modal-box {
-            background: #2c2c2c;
+        .form-box {
+            background: #222;
             padding: 30px;
-            border-radius: var(--radius);
-            width: 90%;
-            max-width: 400px;
+            border-radius: 15px;
             display: flex;
             flex-direction: column;
             gap: 15px;
+            width: 300px;
+            border: 1px solid #444;
         }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <div class="auth-controls">
-            <input type="password" id="master-pass" placeholder="Ключ шифрования" oninput="app.renderGrid()">
-            <button onclick="document.getElementById('modal-add').style.display='flex'">+</button>
+        <div class="controls">
+            <input type="password" id="master-pass" placeholder="Введите мастер-ключ" oninput="app.render()">
+            <button onclick="document.getElementById('modal-add').style.display='flex'">+ Добавить</button>
         </div>
     </div>
 
-    <div id="grid" class="grid"></div>
-
-    <div id="modal-add">
-        <div class="modal-box">
-            <h2 style="margin:0">Новый документ</h2>
-            <select id="new-type" style="padding:10px; border-radius:10px; border:none;">
-                <option value="passport">Паспорт РФ</option>
-                <option value="snils">СНИЛС</option>
-            </select>
-            <input type="text" id="new-fio" placeholder="ФИО">
-            <input type="text" id="new-num" placeholder="Номер / Данные">
-            <button onclick="app.addDoc()">Сохранить</button>
-            <button onclick="document.getElementById('modal-add').style.display='none'" style="background:#444; color:white">Отмена</button>
-        </div>
+    <div class="container">
+        <div id="grid" class="grid"></div>
     </div>
 
     <div id="viewer" onclick="if(event.target === this) app.closeViewer()">
-        
-        <div class="atropos my-atropos">
-            <div class="atropos-scale">
-                <div class="atropos-rotate">
-                    <div class="atropos-inner">
-                        
-                        <div id="book" class="flip-book">
-                            </div>
+        <div style="color: #666; margin-bottom: 20px;">Нажмите мимо, чтобы закрыть</div>
+        <div id="book-container"></div>
+    </div>
 
-                    </div>
-                </div>
-            </div>
+    <div id="modal-add">
+        <div class="form-box">
+            <h3 style="margin:0; text-align:center">Новый Документ</h3>
+            <input type="text" id="in-fio" placeholder="ФИО">
+            <input type="text" id="in-num" placeholder="Номер документа">
+            <button onclick="app.add()">Сохранить</button>
+            <button onclick="document.getElementById('modal-add').style.display='none'" style="background:transparent; border:1px solid #555; color:#aaa">Отмена</button>
         </div>
-
     </div>
 
     <script>
-        // --- 1. CONFIG & DB ---
-        const db = new Dexie("SecureVault");
-        db.version(1).stores({ docs: '++id, type, data' });
-
-        // URLs картинок (Паспорт разрезан CSS-ом или логически)
-        // Для реализма берем обложку и скан разворота
+        // Имитация бланка паспорта (URL картинок)
         const ASSETS = {
-            passport_cover: 'https://img.freepik.com/premium-photo/russian-passport-isolated-white-background_160606-444.jpg',
-            // Качественный скан разворота
-            passport_inside: 'http://googleusercontent.com/image_collection/image_retrieval/2937385595549298704_1'
+            cover: 'https://img.freepik.com/premium-photo/russian-passport-isolated-white-background_160606-444.jpg',
+            // Пустой бланк (половинка)
+            paper: 'https://st4.depositphotos.com/4226061/19717/i/450/depositphotos_197176466-stock-photo-guilloche-background-pattern-for-certificate.jpg' 
         };
 
-        let currentBook = null;
-        let currentAtropos = null;
+        const db = new Dexie("SecurePassportDB");
+        db.version(1).stores({ docs: '++id, data' });
+
+        let currentFlip = null;
 
         const app = {
-            // --- CRYPTO ---
-            encrypt: (data, pass) => CryptoJS.AES.encrypt(JSON.stringify(data), pass).toString(),
+            getKey: () => document.getElementById('master-pass').value,
+
+            // Шифрование AES
+            encrypt: (obj, pass) => CryptoJS.AES.encrypt(JSON.stringify(obj), pass).toString(),
             decrypt: (cipher, pass) => {
                 try {
                     const bytes = CryptoJS.AES.decrypt(cipher, pass);
@@ -264,139 +278,115 @@
                 } catch { return null; }
             },
 
-            // --- LOGIC ---
-            async addDoc() {
-                const pass = document.getElementById('master-pass').value;
-                if (!pass) return alert("Нужен пароль!");
+            async add() {
+                const pass = this.getKey();
+                if (!pass) return alert("Сначала введите мастер-ключ сверху!");
                 
-                const payload = {
-                    fio: document.getElementById('new-fio').value,
-                    num: document.getElementById('new-num').value
-                };
+                const fio = document.getElementById('in-fio').value;
+                const num = document.getElementById('in-num').value;
 
-                await db.docs.add({
-                    type: document.getElementById('new-type').value,
-                    data: this.encrypt(payload, pass)
-                });
+                if(!fio) return;
 
+                const encrypted = this.encrypt({ fio, num, date: new Date().toLocaleDateString() }, pass);
+                await db.docs.add({ data: encrypted });
+                
                 document.getElementById('modal-add').style.display = 'none';
-                this.renderGrid();
+                document.getElementById('in-fio').value = '';
+                document.getElementById('in-num').value = '';
+                this.render();
             },
 
-            async renderGrid() {
-                const pass = document.getElementById('master-pass').value;
-                const container = document.getElementById('grid');
-                container.innerHTML = '';
+            async render() {
+                const pass = this.getKey();
+                const grid = document.getElementById('grid');
+                grid.innerHTML = '';
 
                 const docs = await db.docs.toArray();
-
+                
                 docs.forEach(doc => {
+                    // Пытаемся расшифровать для превью (или показываем закрытый)
+                    // Для безопасности в реальном приложении превью тоже шифруют отдельно
+                    // Здесь просто показываем обложку
+                    
                     const el = document.createElement('div');
-                    el.className = 'doc-item';
-                    
-                    // Превью: Для паспорта обложка, для снилс - зеленая заглушка
-                    const imgUrl = doc.type === 'passport' ? ASSETS.passport_cover : 'https://bafybeif47i434z7x6f4m2x7w23z5s7aovv52t2x7w23z5s7aovv.ipfs.w3s.link/snils-example.jpg';
-                    
-                    el.innerHTML = `<img src="${imgUrl}" loading="lazy">`;
-                    
-                    // Клик -> Открываем
-                    el.onclick = () => this.openDoc(doc, pass);
-                    container.appendChild(el);
+                    el.className = 'doc-card';
+                    el.innerHTML = `
+                        <img src="${ASSETS.cover}" alt="Passport">
+                        <div class="doc-title">Паспорт РФ</div>
+                    `;
+                    el.onclick = () => this.openPassport(doc, pass);
+                    grid.appendChild(el);
                 });
             },
 
-            openDoc(doc, pass) {
+            openPassport(doc, pass) {
                 const data = this.decrypt(doc.data, pass);
-                if (!data) return alert("Неверный пароль!");
+                if (!data) {
+                    alert("Неверный ключ шифрования! Данные не могут быть прочитаны.");
+                    return;
+                }
 
                 const viewer = document.getElementById('viewer');
-                const bookContainer = document.getElementById('book');
-                
+                const container = document.getElementById('book-container');
                 viewer.style.display = 'flex';
-                bookContainer.innerHTML = ''; // Чистим старую книгу
 
-                // 1. Настройка ATROPOS (эффект движения при наклоне)
-                if (currentAtropos) currentAtropos.destroy();
-                currentAtropos = Atropos({
-                    el: '.my-atropos',
-                    activeOffset: 40, // Насколько сильно двигается
-                    shadowScale: 1.05,
-                    rotateTouch: false, // ВАЖНО: отключаем вращение пальцем, чтобы можно было листать страницы!
-                    rotateLock: false // ВАЖНО: разрешаем вращение от гироскопа телефона
-                });
-
-                // 2. Генерация страниц в зависимости от типа
-                if (doc.type === 'passport') {
-                    this.buildPassportBook(bookContainer, data);
-                } else {
-                    // Можно добавить логику для других доков
-                    bookContainer.innerHTML = `<img src="https://bafybeif47i434z7x6f4m2x7w23z5s7aovv52t2x7w23z5s7aovv.ipfs.w3s.link/snils-example.jpg" style="width:100%; height:100%; border-radius:20px;">`;
-                }
-            },
-
-            buildPassportBook(container, data) {
-                // Создаем HTML структуру для page-flip
-                // Стр 1: Обложка
-                // Стр 2: Левая часть разворота (ФИО)
-                // Стр 3: Правая часть разворота (Номер)
-                // Стр 4: Задняя обложка
-
-                const html = `
-                    <div class="page --cover" data-density="hard">
-                        <img src="${ASSETS.passport_cover}">
-                    </div>
-                    
-                    <div class="page --left" data-density="hard">
-                        <div style="width:100%; height:100%; overflow:hidden; position:relative;">
-                            <img src="${ASSETS.passport_inside}" style="width:200%; max-width:none; transform: translateX(0);">
-                            <div class="data-layer">
-                                <div class="val val-fio">${data.fio}</div>
+                // Создаем HTML структуру книги "на лету"
+                container.innerHTML = `
+                    <div class="passport-book" id="myBook">
+                        <div class="page --cover">
+                             <img src="${ASSETS.cover}" style="width:100%; height:100%; object-fit:cover;">
+                        </div>
+                        
+                        <div class="page">
+                            <img src="${ASSETS.paper}" style="width:100%; height:100%; object-fit:cover; opacity:0.5;">
+                            <div class="data-text fio-pos">
+                                ${data.fio}<br>
+                                РОЖД: ${data.date}
                             </div>
                         </div>
-                    </div>
 
-                    <div class="page --right" data-density="hard">
-                         <div style="width:100%; height:100%; overflow:hidden; position:relative;">
-                            <img src="${ASSETS.passport_inside}" style="width:200%; max-width:none; transform: translateX(-50%);">
-                            <div class="data-layer">
-                                <div class="val val-num">${data.num}</div>
+                        <div class="page">
+                            <img src="${ASSETS.paper}" style="width:100%; height:100%; object-fit:cover; opacity:0.5;">
+                            <div class="data-text num-pos">
+                                ${data.num}
                             </div>
                         </div>
-                    </div>
 
-                    <div class="page --cover" data-density="hard">
-                        <img src="${ASSETS.passport_cover}">
+                        <div class="page --cover">
+                            <img src="${ASSETS.cover}" style="width:100%; height:100%; object-fit:cover;">
+                        </div>
                     </div>
                 `;
 
-                container.innerHTML = html;
-
-                // 3. Инициализация PAGE-FLIP
-                if (currentBook) currentBook.destroy();
+                // Инициализация библиотеки (Turn.js logic)
+                const element = document.getElementById('myBook');
                 
-                currentBook = new St.PageFlip(container, {
-                    width: 350, // Ширина ОДНОЙ страницы
-                    height: 500,
-                    size: 'fixed',
-                    minWidth: 350,
-                    maxWidth: 350,
-                    minHeight: 500,
-                    maxHeight: 500,
+                if (currentFlip) currentFlip.destroy();
+
+                currentFlip = new St.PageFlip(element, {
+                    width: 320,  // Ширина одной страницы
+                    height: 460, // Высота
                     showCover: true,
-                    mobileScrollSupport: false // Чтобы не конфликтовало с Atropos
+                    mobileScrollSupport: false // Отключаем скролл чтобы пальцем листать книгу
                 });
 
-                currentBook.loadFromHTML(document.querySelectorAll('.page'));
+                currentFlip.loadFromHTML(document.querySelectorAll('.page'));
+
+                // --- АВТОМАТИЧЕСКОЕ ОТКРЫТИЕ ---
+                // Ждем пока анимация появления модалки пройдет и инициируем перелистывание
+                setTimeout(() => {
+                    // Это и есть команда "открыть паспорт"
+                    currentFlip.flipNext(); 
+                }, 600);
             },
 
             closeViewer() {
                 document.getElementById('viewer').style.display = 'none';
-                if (currentAtropos) currentAtropos.destroy();
             }
         };
 
-        // Старт
-        app.renderGrid();
+        // Запуск при старте
+        app.render();
 
     </script>
 </body>

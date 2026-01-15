@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>OUTDOCS</title>
     
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -17,15 +17,18 @@
             --accent: #ffffff;
         }
 
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
         body {
             background-color: var(--bg);
             margin: 0;
-            padding: 20px;
-            font-family: 'Courier New', monospace;
+            padding: 15px;
+            font-family: system-ui, -apple-system, sans-serif;
             color: white;
+            overflow-x: hidden;
             display: flex;
             flex-direction: column;
-            min-height: 100vh;
+            height: 100vh;
         }
 
         /* --- ШАПКА --- */
@@ -33,116 +36,141 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
+            padding: 10px 5px 25px;
         }
 
         .logo {
-            font-size: 24px;
+            font-size: 26px;
             font-weight: 900;
-            letter-spacing: 2px;
-            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .add-btn {
-            font-size: 40px;
+            font-size: 35px;
             cursor: pointer;
             line-height: 1;
+            padding: 0 10px;
         }
 
-        /* --- СЕТКА (3 колонки, автовысота) --- */
+        /* --- АДАПТИВНАЯ СЕТКА --- */
+        .grid-container {
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: 100px; /* место для футера */
+        }
+
         .grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            flex-grow: 1;
+            gap: 12px;
         }
 
         .doc-item {
             background: var(--card-gray);
             aspect-ratio: 1 / 1.4;
-            border-radius: 20px;
+            border-radius: 18px;
             cursor: pointer;
             transition: transform 0.1s;
         }
 
-        .doc-item:active { transform: scale(0.96); }
+        .doc-item:active { transform: scale(0.95); }
 
-        /* --- ПАНЕЛЬ ВНИЗУ (Мастер-ключ) --- */
+        /* --- ФИКСИРОВАННЫЙ ПОДВАЛ --- */
         .footer {
-            margin-top: 40px;
-            padding-bottom: 20px;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px;
+            background: linear-gradient(transparent, var(--bg) 30%);
+            z-index: 100;
         }
 
         .master-input {
             width: 100%;
             background: #1a1a1a;
-            border: none;
-            border-radius: 12px;
-            padding: 15px;
+            border: 1px solid #333;
+            border-radius: 15px;
+            padding: 18px;
             color: white;
             text-align: center;
             font-size: 16px;
             outline: none;
-            box-sizing: border-box;
         }
 
-        /* --- ПРОСМОТРЩИК (Turn.js) --- */
+        /* --- ВЬЮВЕР ПАСПОРТА --- */
         #viewer-overlay {
             display: none;
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95);
+            background: rgba(0,0,0,0.98);
             z-index: 1000;
             justify-content: center;
             align-items: center;
+            touch-action: none;
         }
 
         #passport-book {
-            width: 300px;
-            height: 420px;
+            margin: auto;
         }
 
         .page {
-            width: 300px;
-            height: 420px;
-            background-color: #a00; /* Обложка */
+            background-color: #222;
+            background-size: cover;
+            background-position: center;
+        }
+
+        /* Внутрянка с поворотом данных */
+        .page-inside {
+            background-color: #fdfdfd;
+            height: 100%;
+            position: relative;
+            background-image: url('images/passport_inside.png');
             background-size: cover;
         }
 
-        .page-content {
-            background: #fdfdfd;
-            height: 100%;
-            padding: 20px;
-            box-sizing: border-box;
-            color: #222;
-            position: relative;
-        }
-
-        /* Текст внутри документа */
         .doc-data {
             position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%) rotate(-90deg);
-            width: 300px;
-            text-align: center;
+            top: 50%;
+            left: 50%;
+            /* Поворот текста на 90 градусов вправо относительно вертикали */
+            transform: translate(-50%, -50%) rotate(0deg); 
+            width: 80%;
+            color: #000;
+            font-family: "Courier New", monospace;
             font-weight: bold;
-            text-transform: uppercase;
-            font-size: 14px;
+            text-align: left;
+            font-size: 13px;
+            line-height: 1.4;
         }
 
         /* Модалка добавления */
         #modal-add {
             display: none;
             position: fixed;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            background: #222;
-            padding: 20px;
-            border-radius: 20px;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
             z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .form-box {
+            background: #1a1a1a;
+            padding: 25px;
+            border-radius: 25px;
+            width: 100%;
+            max-width: 400px;
+            display: flex;
             flex-direction: column;
-            gap: 10px;
-            width: 80%;
+            gap: 15px;
+        }
+        .form-box input {
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid #333;
+            background: #000;
+            color: #fff;
         }
     </style>
 </head>
@@ -153,22 +181,26 @@
         <div class="add-btn" onclick="showAddModal()">+</div>
     </div>
 
-    <div id="grid" class="grid"></div>
+    <div class="grid-container">
+        <div id="grid" class="grid"></div>
+    </div>
 
     <div class="footer">
         <input type="password" id="master-pass" class="master-input" placeholder="МАСТЕР-КЛЮЧ" oninput="app.renderGrid()">
     </div>
 
     <div id="viewer-overlay" onclick="app.closeViewer()">
-        <div id="passport-book">
-            </div>
+        <div id="passport-book"></div>
     </div>
 
     <div id="modal-add">
-        <input type="text" id="new-fio" placeholder="ФИО" style="padding:10px">
-        <input type="text" id="new-num" placeholder="ДАННЫЕ" style="padding:10px">
-        <button onclick="app.addDoc()" style="padding:10px; background:white; border:none">СОХРАНИТЬ</button>
-        <button onclick="hideAddModal()" style="padding:10px; background:#444; color:white; border:none">ОТМЕНА</button>
+        <div class="form-box">
+            <h2 style="margin-top:0">Новый док</h2>
+            <input type="text" id="new-fio" placeholder="ФИО">
+            <input type="text" id="new-num" placeholder="ДАННЫЕ / СЕРИЯ / НОМЕР">
+            <button onclick="app.addDoc()" style="padding:15px; border-radius:12px; background:#fff; font-weight:bold">СОХРАНИТЬ</button>
+            <button onclick="hideAddModal()" style="background:none; color:#666; border:none; margin-top:5px">ОТМЕНА</button>
+        </div>
     </div>
 
     <script>
@@ -186,13 +218,8 @@
 
             async addDoc() {
                 const pass = $('#master-pass').val();
-                if (!pass) return alert("Введите мастер-ключ!");
-                
-                const payload = {
-                    fio: $('#new-fio').val(),
-                    num: $('#new-num').val()
-                };
-
+                if (!pass) return alert("Введите ключ!");
+                const payload = { fio: $('#new-fio').val(), num: $('#new-num').val() };
                 await db.docs.add({ data: this.encrypt(payload, pass) });
                 hideAddModal();
                 this.renderGrid();
@@ -201,50 +228,41 @@
             async renderGrid() {
                 const grid = $('#grid').empty();
                 const docs = await db.docs.toArray();
-
                 docs.forEach(doc => {
-                    $('<div class="doc-item"></div>')
-                        .appendTo(grid)
-                        .click(() => this.openDoc(doc));
+                    $('<div class="doc-item"></div>').appendTo(grid).click(() => this.openDoc(doc));
                 });
             },
 
             openDoc(doc) {
                 const pass = $('#master-pass').val();
                 const data = this.decrypt(doc.data, pass);
-                if (!data) return alert("Ошибка ключа");
+                if (!data) return alert("Неверный ключ!");
+
+                const winW = $(window).width();
+                const bookW = Math.min(winW * 0.9, 340);
+                const bookH = bookW * 1.4;
 
                 $('#viewer-overlay').css('display', 'flex');
-                const book = $('#passport-book').empty();
+                const book = $('#passport-book').empty().css({width: bookW, height: bookH});
 
-                // Создаем структуру страниц для Turn.js
                 const pages = `
-                    <div class="page" style="background-image:url('https://img.freepik.com/premium-photo/russian-passport-isolated-white-background_160606-444.jpg')"></div>
-                    <div class="page"><div class="page-content"><div class="doc-data">${data.fio}<br><br>${data.num}</div></div></div>
-                    <div class="page"><div class="page-content"></div></div>
-                    <div class="page" style="background-image:url('https://img.freepik.com/premium-photo/russian-passport-isolated-white-background_160606-444.jpg')"></div>
+                    <div class="page" style="background-image:url('images/passport_cover.png')"></div>
+                    <div class="page"><div class="page-inside">
+                        <div class="doc-data">${data.fio}<br><br>${data.num}</div>
+                    </div></div>
+                    <div class="page"><div class="page-inside"></div></div>
+                    <div class="page" style="background-image:url('images/passport_cover.png')"></div>
                 `;
                 
                 book.html(pages);
-
-                // Инициализация Turn.js
-                book.turn({
-                    width: 300,
-                    height: 420,
-                    autoCenter: true,
-                    acceleration: true,
-                    duration: 1000
-                });
-
-                // АВТОМАТИЧЕСКИЙ ОТКРЫТИЕ (через полсекунды)
-                setTimeout(() => {
-                    book.turn('next');
-                }, 500);
+                book.turn({ width: bookW, height: bookH, autoCenter: true, duration: 800 });
+                
+                setTimeout(() => { book.turn('next'); }, 400);
             },
 
             closeViewer() {
                 $('#viewer-overlay').hide();
-                $('#passport-book').turn('destroy');
+                if ($('#passport-book').turn('is')) $('#passport-book').turn('destroy');
             }
         };
 

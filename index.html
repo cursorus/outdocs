@@ -10,9 +10,11 @@
 
     <style>
         :root {
-            --bg-color: #121212;
-            --card-bg: #1e1e1e;
-            --accent: #e63946;
+            --bg-color: #1c1c1c;
+            --card-bg: #2a2a2a; /* Чуть светлее для контраста */
+            --accent-color: #f7a400; /* Желтый акцент для кнопок */
+            --border-radius-large: 30px;
+            --border-radius-medium: 15px;
         }
 
         body {
@@ -23,69 +25,160 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
         }
 
         .header {
             padding: 2rem;
             text-align: center;
+            width: 100%;
         }
 
-        /* Поле ввода пароля */
-        .auth-box {
+        h1 {
+            font-size: 2.5em;
             margin-bottom: 20px;
-            background: var(--card-bg);
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
 
-        input {
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid #444;
-            background: #2a2a2a;
+        .auth-box {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            background: var(--card-bg);
+            padding: 20px 30px;
+            border-radius: var(--border-radius-large);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+            max-width: 600px;
+            width: 100%;
+        }
+
+        input[type="password"],
+        input[type="text"] {
+            flex-grow: 1;
+            min-width: 200px;
+            padding: 15px;
+            border-radius: var(--border-radius-medium);
+            border: none;
+            background: #3a3a3a;
             color: white;
-            margin: 5px;
+            font-size: 1.1em;
+            outline: none;
+        }
+        input[type="password"]::placeholder,
+        input[type="text"]::placeholder {
+            color: #bbb;
         }
 
         button {
-            padding: 10px 20px;
-            background: var(--accent);
+            padding: 15px 25px;
+            background: var(--accent-color);
             border: none;
-            border-radius: 5px;
-            color: white;
+            border-radius: var(--border-radius-medium);
+            color: #1c1c1c;
             cursor: pointer;
             font-weight: bold;
+            font-size: 1.1em;
+            transition: background 0.2s, transform 0.2s;
+        }
+        button:hover {
+            background: #fec147;
+            transform: translateY(-2px);
         }
 
         /* Сетка документов */
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* Три карточки в ряд */
+            gap: 30px;
             width: 90%;
-            max-width: 1000px;
-            padding: 20px;
+            max-width: 1200px;
+            padding: 20px 0;
         }
 
-        .doc-item {
+        .doc-card {
             background: var(--card-bg);
-            border-radius: 10px;
-            padding: 10px;
+            border-radius: var(--border-radius-large);
             cursor: pointer;
-            text-align: center;
-            transition: transform 0.2s;
-            border: 1px solid #333;
+            overflow: hidden;
+            transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
+            aspect-ratio: 16/10; /* Горизонтальная ориентация */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
         }
-
-        .doc-item:hover { transform: scale(1.05); }
-
-        .doc-item img {
+        .doc-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 25px rgba(0,0,0,0.6);
+        }
+        .doc-card img {
             width: 100%;
-            border-radius: 5px;
+            height: 100%;
+            object-fit: cover; /* Заполнить всю карточку */
+            border-radius: var(--border-radius-large);
+        }
+        .doc-card .doc-title {
+            position: absolute;
+            bottom: 15px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 8px 15px;
+            border-radius: var(--border-radius-medium);
+            font-size: 1em;
+            font-weight: bold;
+            color: white;
         }
 
-        /* Модальное окно просмотра (3D) */
+
+        /* Модальное окно добавления документа */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+        .modal-content {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: var(--border-radius-large);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.7);
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+        .modal-content h3 {
+            margin-top: 0;
+            font-size: 1.8em;
+            color: var(--accent-color);
+        }
+        .modal-content input,
+        .modal-content select {
+            width: calc(100% - 30px);
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: var(--border-radius-medium);
+            border: none;
+            background: #3a3a3a;
+            color: white;
+            font-size: 1.1em;
+            outline: none;
+        }
+        .modal-content button {
+            margin: 15px 10px 0;
+            width: calc(50% - 20px);
+        }
+        .modal-content button.cancel {
+            background: #555;
+            color: white;
+        }
+
+        /* Просмотр документа (Viewer) */
         .viewer-overlay {
             display: none;
             position: fixed;
@@ -93,84 +186,124 @@
             background: rgba(0,0,0,0.95);
             justify-content: center;
             align-items: center;
-            perspective: 2000px;
-            z-index: 1000;
+            z-index: 1500;
         }
 
-        /* Книга (Паспорт) */
-        .book {
-            width: 300px;
-            height: 420px;
+        /* Контейнер для документа с эффектами */
+        .doc-display {
             position: relative;
-            transform-style: preserve-3d;
-            transition: transform 1s cubic-bezier(0.645, 0.045, 0.355, 1);
-            cursor: pointer;
+            background-color: transparent; /* Фон для блика */
+            border-radius: var(--border-radius-large); /* Общие закругления */
+            overflow: hidden; /* Важно для блика */
+            box-shadow: 0 0 15px rgba(0,0,0,0.8);
+            transition: transform 0.5s ease-out;
+            
+            /* Настраиваемые размеры для разных типов документов */
+            max-width: 90vw;
+            max-height: 90vh;
+            width: auto;
+            height: auto;
         }
+        
+        .doc-display.passport { width: 600px; height: 420px; transform: rotate(90deg); }
+        .doc-display.a4 { width: 600px; height: 840px; } /* Примерные размеры A4 */
+        .doc-display.card { width: 400px; height: 250px; } /* Примерные размеры банковской карты */
 
-        .book.open {
-            transform: rotateY(-150deg) translateX(150px);
-        }
-
-        .face {
+        /* Обводка и пластиковый эффект */
+        .doc-display::before,
+        .doc-display::after {
+            content: '';
             position: absolute;
-            width: 100%;
-            height: 100%;
-            backface-visibility: hidden;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: var(--border-radius-large);
+            pointer-events: none;
         }
-
-        .front {
-            background: #800000; /* Цвет обложки */
+        .doc-display::before { /* Белая обводка */
+            border: 1px solid white;
+            z-index: 1;
+        }
+        .doc-display::after { /* Пластиковый блик */
+            border: 10px solid rgba(255, 255, 255, 0.15); /* Полупрозрачная рамка */
             z-index: 2;
         }
 
-        .inside {
-            background: #fdfdfd;
-            transform: rotateY(180deg);
-            color: black;
-            padding: 0;
-        }
-
-        /* Наложение данных на картинку */
-        .passport-ui {
+        /* Контент внутри документа */
+        .doc-content {
             position: relative;
             width: 100%;
             height: 100%;
+            border-radius: var(--border-radius-large);
+            overflow: hidden; /* Обрезаем, если изображение выходит за рамки */
         }
-
-        .passport-ui img {
+        .doc-content img {
             width: 100%;
             height: 100%;
             object-fit: cover;
+            position: absolute; /* Для наложения данных */
+            top: 0; left: 0;
         }
 
+        /* Блик при наклоне (GLOW EFFECT) */
+        .doc-glow {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle at var(--glowX, 50%) var(--glowY, 50%), rgba(255, 255, 255, 0.2) 0%, transparent 70%);
+            opacity: var(--glowOpacity, 0);
+            transition: opacity 0.1s ease-out;
+            border-radius: var(--border-radius-large);
+            pointer-events: none;
+            z-index: 10; /* Над изображением, но под текстом */
+        }
+
+        /* Наложение данных на изображение документа */
         .data-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none;
-            font-family: "Courier New", monospace;
-            text-transform: uppercase;
+            pointer-events: none; /* Чтобы можно было кликать сквозь */
+            font-family: 'Roboto Mono', monospace; /* Моноширинный шрифт для данных */
+            color: #333; /* Цвет текста на документе */
             font-weight: bold;
+            text-transform: uppercase;
+        }
+        .data-overlay div {
+            position: absolute;
+            white-space: nowrap; /* Не переносить строку */
         }
 
-        /* Координаты данных (настроить под картинку) */
-        .val-fio { position: absolute; top: 205px; left: 35px; font-size: 12px; }
-        .val-num { position: absolute; top: 355px; left: 185px; font-size: 14px; color: #400; }
-
-        /* Модалка добавления */
-        #add-modal {
-            display: none;
-            position: fixed;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            background: var(--card-bg);
-            padding: 30px;
-            border-radius: 15px;
-            z-index: 1100;
-            border: 1px solid var(--accent);
+        /* Специфичные позиции для паспорта (горизонтальный, повернутый) */
+        .doc-display.passport .data-overlay .val-fio {
+            top: 190px; left: 45px; /* Настроить */
+            font-size: 11px;
+            transform: rotate(-90deg); /* Повернуть текст */
+            transform-origin: top left;
         }
+        .doc-display.passport .data-overlay .val-num {
+            top: 360px; left: 190px; /* Настроить */
+            font-size: 13px;
+            color: #500;
+            transform: rotate(-90deg); /* Повернуть текст */
+            transform-origin: top left;
+        }
+
+        /* Специфичные позиции для A4 документов */
+        .doc-display.a4 .data-overlay .val-fio { top: 200px; left: 100px; font-size: 16px; }
+        .doc-display.a4 .data-overlay .val-num { top: 300px; left: 100px; font-size: 14px; }
+
+        /* Специфичные позиции для карточек */
+        .doc-display.card .data-overlay .val-fio { top: 80px; left: 50px; font-size: 12px; }
+        .doc-display.card .data-overlay .val-num { top: 150px; left: 50px; font-size: 14px; }
+
+
+        /* Загрузочные изображения документов (замените на свои) */
+        .img-passport { content: url('https://img.freepik.com/premium-photo/russian-passport-isolated-white-background_160606-444.jpg'); }
+        .img-passport-inside { content: url('https://st3.depositphotos.com/10545222/15325/i/450/depositphotos_153251780-stock-photo-passport-of-the-russian-federation.jpg'); }
+        .img-inn { content: url('https://bafybeif3uoy364z7x6f4m2x7w23z5s7aovv52t2x7w23z5s7aovv.ipfs.w3s.link/inn-example.jpg'); } /* Пример A4 */
+        .img-snils { content: url('https://bafybeif47i434z7x6f4m2x7w23z5s7aovv52t2x7w23z5s7aovv.ipfs.w3s.link/snils-example.jpg'); } /* Пример A4 */
+        .img-driver-license { content: url('https://bafybeif5uoy364z7x6f4m2x7w23z5s7aovv52t2x7w23z5s7aovv.ipfs.w3s.link/driver-license-example.jpg'); } /* Пример Card */
+        .img-polis { content: url('https://bafybeif6uoy364z7x6f4m2x7w23z5s7aovv52t2x7w23z5s7aovv.ipfs.w3s.link/polis-example.jpg'); } /* Пример Card */
+        .img-birth-cert { content: url('https://bafybeif7uoy364z7x6f4m2x7w23z5s7aovv52t2x7w23z5s7aovv.ipfs.w3s.link/birth-cert-example.jpg'); } /* Пример A4 */
+        .img-marriage-cert { content: url('https://bafybeif8uoy364z7x6f4m2x7w23z5s7aovv52t2x7w23z5s7aovv.ipfs.w3s.link/marriage-cert-example.jpg'); } /* Пример A4 */
+
     </style>
 </head>
 <body>
@@ -179,41 +312,114 @@
         <h1>🔒 Мои Документы</h1>
         <div class="auth-box">
             <input type="password" id="master-pass" placeholder="Мастер-пароль" oninput="app.loadDocs()">
-            <button onclick="document.getElementById('add-modal').style.display='block'">+ Добавить</button>
+            <button onclick="ui.showModal('add-modal')">+ Добавить</button>
         </div>
     </div>
 
     <div id="grid" class="grid"></div>
 
-    <div id="add-modal">
-        <h3>Новый паспорт</h3>
-        <input type="text" id="in-fio" placeholder="ФИО полностью"><br>
-        <input type="text" id="in-num" placeholder="Серия и номер"><br><br>
-        <button onclick="app.saveDoc()">Зашифровать и сохранить</button>
-        <button style="background:#555" onclick="document.getElementById('add-modal').style.display='none'">Отмена</button>
+    <div id="add-modal" class="modal">
+        <div class="modal-content">
+            <h3>Добавить документ</h3>
+            <select id="doc-type-select">
+                <option value="passport">Паспорт РФ</option>
+                <option value="inn">ИНН</option>
+                <option value="snils">СНИЛС</option>
+                <option value="driver_license">Водительские права</option>
+                <option value="polis">Полис ОМС</option>
+                <option value="birth_certificate">Свидетельство о рождении</option>
+                <option value="marriage_certificate">Свидетельство о браке</option>
+            </select>
+            <input type="text" id="in-fio" placeholder="ФИО полностью">
+            <input type="text" id="in-num" placeholder="Серия и номер / Данные">
+            <button onclick="app.saveDoc()">Зашифровать и сохранить</button>
+            <button class="cancel" onclick="ui.hideModal('add-modal')">Отмена</button>
+        </div>
     </div>
 
-    <div id="viewer" class="viewer-overlay" onclick="app.closeBook()">
-        <div class="book" id="book-element">
-            <div class="face front">
-                <img src="https://img.freepik.com/premium-photo/russian-passport-isolated-white-background_160606-444.jpg" alt="Обложка">
-            </div>
-            <div class="face inside">
-                <div class="passport-ui">
-                    <img src="https://st3.depositphotos.com/10545222/15325/i/450/depositphotos_153251780-stock-photo-passport-of-the-russian-federation.jpg" alt="Разворот">
-                    <div class="data-overlay">
-                        <div id="out-fio" class="val-fio">ИВАНОВ ИВАН ИВАНОВИЧ</div>
-                        <div id="out-num" class="val-num">45 12 123456</div>
-                    </div>
+    <div id="viewer" class="viewer-overlay" onclick="app.closeViewer()">
+        <div id="doc-display" class="doc-display">
+            <div class="doc-content">
+                <img id="doc-main-img" src="" alt="Документ">
+                <div class="data-overlay">
+                    <div id="out-fio" class="val-fio"></div>
+                    <div id="out-num" class="val-num"></div>
                 </div>
             </div>
+            <div class="doc-glow" id="doc-glow"></div>
         </div>
     </div>
 
     <script>
-        // 1. Настройка БД
-        const db = new Dexie("SecureStorage");
-        db.version(1).stores({ documents: '++id, data' });
+        // Инициализация БД
+        const db = new Dexie("SecureDocsDB");
+        db.version(1).stores({ documents: '++id, type, data' });
+
+        // Словарь изображений и типов документов
+        const docTemplates = {
+            passport: { 
+                title: 'Паспорт РФ', 
+                cover: 'img-passport', 
+                inside: 'img-passport-inside', 
+                class: 'passport',
+                fioPos: { top: '190px', left: '45px', fontSize: '11px', rotate: '-90deg' },
+                numPos: { top: '360px', left: '190px', fontSize: '13px', rotate: '-90deg' }
+            },
+            inn: { 
+                title: 'ИНН', 
+                cover: 'img-inn', 
+                inside: 'img-inn', 
+                class: 'a4',
+                fioPos: { top: '200px', left: '100px', fontSize: '16px' },
+                numPos: { top: '300px', left: '100px', fontSize: '14px' }
+            },
+            snils: { 
+                title: 'СНИЛС', 
+                cover: 'img-snils', 
+                inside: 'img-snils', 
+                class: 'a4',
+                fioPos: { top: '180px', left: '150px', fontSize: '15px' },
+                numPos: { top: '250px', left: '150px', fontSize: '14px' }
+            },
+            driver_license: { 
+                title: 'Вод. права', 
+                cover: 'img-driver-license', 
+                inside: 'img-driver-license', 
+                class: 'card',
+                fioPos: { top: '100px', left: '60px', fontSize: '12px' },
+                numPos: { top: '170px', left: '60px', fontSize: '14px' }
+            },
+            polis: { 
+                title: 'Полис ОМС', 
+                cover: 'img-polis', 
+                inside: 'img-polis', 
+                class: 'card',
+                fioPos: { top: '90px', left: '50px', fontSize: '12px' },
+                numPos: { top: '140px', left: '50px', fontSize: '14px' }
+            },
+            birth_certificate: { 
+                title: 'Св-во о рождении', 
+                cover: 'img-birth-cert', 
+                inside: 'img-birth-cert', 
+                class: 'a4',
+                fioPos: { top: '220px', left: '120px', fontSize: '16px' },
+                numPos: { top: '350px', left: '120px', fontSize: '14px' }
+            },
+            marriage_certificate: { 
+                title: 'Св-во о браке', 
+                cover: 'img-marriage-cert', 
+                inside: 'img-marriage-cert', 
+                class: 'a4',
+                fioPos: { top: '250px', left: '100px', fontSize: '16px' },
+                numPos: { top: '400px', left: '100px', fontSize: '14px' }
+            }
+            // Добавьте другие типы документов сюда
+        };
+
+        const ui = {
+            showModal: (id) => document.getElementById(id).style.display = 'flex',
+            hideModal: (id) => document.getElementById(id).style.display = 'none',
+        };
 
         const app = {
             // Шифрование
@@ -225,24 +431,28 @@
                 } catch(e) { return null; }
             },
 
-            // Сохранение
+            // Сохранение документа
             async saveDoc() {
                 const pass = document.getElementById('master-pass').value;
-                if (!pass) return alert("Сначала введите мастер-пароль сверху!");
+                if (!pass) return alert("Сначала введите мастер-пароль!");
 
+                const docType = document.getElementById('doc-type-select').value;
                 const data = {
                     fio: document.getElementById('in-fio').value,
                     num: document.getElementById('in-num').value
                 };
 
                 const encrypted = this.encrypt(JSON.stringify(data), pass);
-                await db.documents.add({ data: encrypted });
+                await db.documents.add({ type: docType, data: encrypted });
                 
-                document.getElementById('add-modal').style.display = 'none';
+                ui.hideModal('add-modal');
+                // Очищаем поля формы после сохранения
+                document.getElementById('in-fio').value = '';
+                document.getElementById('in-num').value = '';
                 this.loadDocs();
             },
 
-            // Загрузка сетки
+            // Загрузка и отображение документов в сетке
             async loadDocs() {
                 const pass = document.getElementById('master-pass').value;
                 const grid = document.getElementById('grid');
@@ -251,42 +461,143 @@
                 const items = await db.documents.toArray();
                 
                 items.forEach(item => {
+                    const docInfo = docTemplates[item.type];
+                    if (!docInfo) return; // Пропустить неизвестные типы
+
                     const el = document.createElement('div');
-                    el.className = 'doc-item';
+                    el.className = 'doc-card';
                     el.innerHTML = `
-                        <img src="https://img.freepik.com/premium-photo/russian-passport-isolated-white-background_160606-444.jpg">
-                        <p>Паспорт РФ</p>
+                        <img class="${docInfo.cover}">
+                        <span class="doc-title">${docInfo.title}</span>
                     `;
-                    el.onclick = () => this.openBook(item.data, pass);
+                    el.onclick = () => this.openViewer(item.type, item.data, pass);
                     grid.appendChild(el);
                 });
             },
 
-            // Логика 3D анимации
-            openBook(encryptedData, pass) {
+            // Открытие и настройка просмотрщика
+            openViewer(docType, encryptedData, pass) {
                 const decrypted = this.decrypt(encryptedData, pass);
                 if (!decrypted) return alert("Ошибка расшифровки! Проверьте пароль.");
 
                 const data = JSON.parse(decrypted);
-                document.getElementById('out-fio').innerText = data.fio;
-                document.getElementById('out-num').innerText = data.num;
+                const docInfo = docTemplates[docType];
+                if (!docInfo) return;
 
-                document.getElementById('viewer').style.display = 'flex';
-                setTimeout(() => {
-                    document.getElementById('book-element').classList.add('open');
-                }, 100);
+                const viewer = document.getElementById('viewer');
+                const docDisplay = document.getElementById('doc-display');
+                const docImg = document.getElementById('doc-main-img');
+                const outFio = document.getElementById('out-fio');
+                const outNum = document.getElementById('out-num');
+
+                // Очистка предыдущих классов и стилей
+                docDisplay.className = 'doc-display';
+                outFio.style = '';
+                outNum.style = '';
+
+                // Применение классов для размеров
+                docDisplay.classList.add(docInfo.class);
+                docImg.className = docInfo.inside; // Изображение для внутренней части
+
+                outFio.innerText = data.fio;
+                outNum.innerText = data.num;
+
+                // Применение стилей для позиционирования текста
+                Object.assign(outFio.style, {
+                    top: docInfo.fioPos.top,
+                    left: docInfo.fioPos.left,
+                    fontSize: docInfo.fioPos.fontSize,
+                    transform: docInfo.fioPos.rotate ? `rotate(${docInfo.fioPos.rotate})` : ''
+                });
+                Object.assign(outNum.style, {
+                    top: docInfo.numPos.top,
+                    left: docInfo.numPos.left,
+                    fontSize: docInfo.numPos.fontSize,
+                    color: docInfo.numPos.color || '#333',
+                    transform: docInfo.numPos.rotate ? `rotate(${docInfo.numPos.rotate})` : ''
+                });
+                
+                viewer.style.display = 'flex';
+                // Активация блика
+                app.activateGlowEffect();
             },
 
-            closeBook() {
-                document.getElementById('book-element').classList.remove('open');
-                setTimeout(() => {
-                    document.getElementById('viewer').style.display = 'none';
-                }, 800);
+            closeViewer() {
+                document.getElementById('viewer').style.display = 'none';
+                // Деактивация блика
+                app.deactivateGlowEffect();
+            },
+
+            // Эффект блика при наклоне
+            activateGlowEffect() {
+                const docDisplay = document.getElementById('doc-display');
+                const docGlow = document.getElementById('doc-glow');
+                let isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
+
+                if (window.DeviceOrientationEvent && isMobile) {
+                    let timeout;
+                    const handleOrientation = (event) => {
+                        clearTimeout(timeout); // Предотвратить множественный вызов
+
+                        // Gamma (left-right) -90 to 90, Beta (front-back) -180 to 180
+                        const gamma = event.gamma; // [-90, 90]
+                        const beta = event.beta;   // [-180, 180]
+
+                        // Нормализация в диапазон [0, 100] для процентов
+                        let x = ((gamma + 90) / 180) * 100;
+                        let y = ((beta + 180) / 360) * 100;
+
+                        // Корректируем для портретного/ландшафтного режима или особенностей устройства
+                        // Здесь могут понадобиться индивидуальные настройки
+                        // Для примера: инвертируем Y для более естественного поведения на некоторых устройствах
+                        y = 100 - y; 
+
+                        docGlow.style.setProperty('--glowX', `${x}%`);
+                        docGlow.style.setProperty('--glowY', `${y}%`);
+                        docGlow.style.setProperty('--glowOpacity', '1');
+
+                        // Затухание блика, если нет движения
+                        timeout = setTimeout(() => {
+                            docGlow.style.setProperty('--glowOpacity', '0');
+                        }, 500); // Скрываем блик через 0.5 секунды без движения
+                    };
+
+                    window.addEventListener('deviceorientation', handleOrientation);
+                    docDisplay._orientationHandler = handleOrientation; // Сохраняем ссылку на обработчик
+                } else {
+                    // Если не мобильное устройство, просто показываем блик по центру
+                    docGlow.style.setProperty('--glowX', '50%');
+                    docGlow.style.setProperty('--glowY', '50%');
+                    docGlow.style.setProperty('--glowOpacity', '0.7');
+                }
+            },
+
+            deactivateGlowEffect() {
+                const docDisplay = document.getElementById('doc-display');
+                const docGlow = document.getElementById('doc-glow');
+                if (docDisplay._orientationHandler) {
+                    window.removeEventListener('deviceorientation', docDisplay._orientationHandler);
+                    docDisplay._orientationHandler = null;
+                }
+                docGlow.style.setProperty('--glowOpacity', '0');
             }
         };
 
-        // Начальная загрузка
-        app.loadDocs();
+        // Начальная загрузка документов
+        document.addEventListener('DOMContentLoaded', () => {
+            // При первой загрузке можно попробовать запросить разрешение на DeviceOrientation, если это мобильное устройство
+            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                    .then(permissionState => {
+                        if (permissionState === 'granted') {
+                            console.log('Разрешение на акселерометр получено.');
+                        }
+                    })
+                    .catch(console.error);
+            }
+            app.loadDocs();
+        });
+
     </script>
 </body>
 </html>

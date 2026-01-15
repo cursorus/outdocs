@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeDoc - Зашифрованные документы</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --accent: #e63946;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: var(--bg-color);
+            color: white;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header {
+            padding: 2rem;
+            text-align: center;
+        }
+
+        /* Поле ввода пароля */
+        .auth-box {
+            margin-bottom: 20px;
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        input {
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #444;
+            background: #2a2a2a;
+            color: white;
+            margin: 5px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: var(--accent);
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* Сетка документов */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 20px;
+            width: 90%;
+            max-width: 1000px;
+            padding: 20px;
+        }
+
+        .doc-item {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 10px;
+            cursor: pointer;
+            text-align: center;
+            transition: transform 0.2s;
+            border: 1px solid #333;
+        }
+
+        .doc-item:hover { transform: scale(1.05); }
+
+        .doc-item img {
+            width: 100%;
+            border-radius: 5px;
+        }
+
+        /* Модальное окно просмотра (3D) */
+        .viewer-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95);
+            justify-content: center;
+            align-items: center;
+            perspective: 2000px;
+            z-index: 1000;
+        }
+
+        /* Книга (Паспорт) */
+        .book {
+            width: 300px;
+            height: 420px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 1s cubic-bezier(0.645, 0.045, 0.355, 1);
+            cursor: pointer;
+        }
+
+        .book.open {
+            transform: rotateY(-150deg) translateX(150px);
+        }
+
+        .face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        .front {
+            background: #800000; /* Цвет обложки */
+            z-index: 2;
+        }
+
+        .inside {
+            background: #fdfdfd;
+            transform: rotateY(180deg);
+            color: black;
+            padding: 0;
+        }
+
+        /* Наложение данных на картинку */
+        .passport-ui {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .passport-ui img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .data-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            font-family: "Courier New", monospace;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        /* Координаты данных (настроить под картинку) */
+        .val-fio { position: absolute; top: 205px; left: 35px; font-size: 12px; }
+        .val-num { position: absolute; top: 355px; left: 185px; font-size: 14px; color: #400; }
+
+        /* Модалка добавления */
+        #add-modal {
+            display: none;
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 15px;
+            z-index: 1100;
+            border: 1px solid var(--accent);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🔒 Мои Документы</h1>
+        <div class="auth-box">
+            <input type="password" id="master-pass" placeholder="Мастер-пароль" oninput="app.loadDocs()">
+            <button onclick="document.getElementById('add-modal').style.display='block'">+ Добавить</button>
+        </div>
+    </div>
+
+    <div id="grid" class="grid"></div>
+
+    <div id="add-modal">
+        <h3>Новый паспорт</h3>
+        <input type="text" id="in-fio" placeholder="ФИО полностью"><br>
+        <input type="text" id="in-num" placeholder="Серия и номер"><br><br>
+        <button onclick="app.saveDoc()">Зашифровать и сохранить</button>
+        <button style="background:#555" onclick="document.getElementById('add-modal').style.display='none'">Отмена</button>
+    </div>
+
+    <div id="viewer" class="viewer-overlay" onclick="app.closeBook()">
+        <div class="book" id="book-element">
+            <div class="face front">
+                <img src="https://img.freepik.com/premium-photo/russian-passport-isolated-white-background_160606-444.jpg" alt="Обложка">
+            </div>
+            <div class="face inside">
+                <div class="passport-ui">
+                    <img src="https://st3.depositphotos.com/10545222/15325/i/450/depositphotos_153251780-stock-photo-passport-of-the-russian-federation.jpg" alt="Разворот">
+                    <div class="data-overlay">
+                        <div id="out-fio" class="val-fio">ИВАНОВ ИВАН ИВАНОВИЧ</div>
+                        <div id="out-num" class="val-num">45 12 123456</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 1. Настройка БД
+        const db = new Dexie("SecureStorage");
+        db.version(1).stores({ documents: '++id, data' });
+
+        const app = {
+            // Шифрование
+            encrypt: (text, key) => CryptoJS.AES.encrypt(text, key).toString(),
+            decrypt: (cipher, key) => {
+                try {
+                    const bytes = CryptoJS.AES.decrypt(cipher, key);
+                    return bytes.toString(CryptoJS.enc.Utf8);
+                } catch(e) { return null; }
+            },
+
+            // Сохранение
+            async saveDoc() {
+                const pass = document.getElementById('master-pass').value;
+                if (!pass) return alert("Сначала введите мастер-пароль сверху!");
+
+                const data = {
+                    fio: document.getElementById('in-fio').value,
+                    num: document.getElementById('in-num').value
+                };
+
+                const encrypted = this.encrypt(JSON.stringify(data), pass);
+                await db.documents.add({ data: encrypted });
+                
+                document.getElementById('add-modal').style.display = 'none';
+                this.loadDocs();
+            },
+
+            // Загрузка сетки
+            async loadDocs() {
+                const pass = document.getElementById('master-pass').value;
+                const grid = document.getElementById('grid');
+                grid.innerHTML = '';
+
+                const items = await db.documents.toArray();
+                
+                items.forEach(item => {
+                    const el = document.createElement('div');
+                    el.className = 'doc-item';
+                    el.innerHTML = `
+                        <img src="https://img.freepik.com/premium-photo/russian-passport-isolated-white-background_160606-444.jpg">
+                        <p>Паспорт РФ</p>
+                    `;
+                    el.onclick = () => this.openBook(item.data, pass);
+                    grid.appendChild(el);
+                });
+            },
+
+            // Логика 3D анимации
+            openBook(encryptedData, pass) {
+                const decrypted = this.decrypt(encryptedData, pass);
+                if (!decrypted) return alert("Ошибка расшифровки! Проверьте пароль.");
+
+                const data = JSON.parse(decrypted);
+                document.getElementById('out-fio').innerText = data.fio;
+                document.getElementById('out-num').innerText = data.num;
+
+                document.getElementById('viewer').style.display = 'flex';
+                setTimeout(() => {
+                    document.getElementById('book-element').classList.add('open');
+                }, 100);
+            },
+
+            closeBook() {
+                document.getElementById('book-element').classList.remove('open');
+                setTimeout(() => {
+                    document.getElementById('viewer').style.display = 'none';
+                }, 800);
+            }
+        };
+
+        // Начальная загрузка
+        app.loadDocs();
+    </script>
+</body>
+</html>
